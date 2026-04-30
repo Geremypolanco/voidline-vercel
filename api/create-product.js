@@ -1,42 +1,38 @@
-import fetch from "node-fetch";
-
-const SHOP = "voidline-38.myshopify.com";
+import axios from "axios";
 
 export default async function handler(req, res) {
-  try {
-    const ACCESS_TOKEN = process.env.SHOPIFY_ACCESS_TOKEN;
+  const token = global.shopifyToken;
 
-    const url = `https://${SHOP}/admin/api/2024-10/products.json`;
-
-    const body = {
-      product: {
-        title: "Producto generado por VOIDLINE",
-        body_html: "Descripción automática generada por VOIDLINE",
-        vendor: "VOIDLINE",
-        product_type: "Automático"
-      }
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Shopify-Access-Token": ACCESS_TOKEN
-      },
-      body: JSON.stringify(body)
+  if (!token) {
+    return res.status(400).json({
+      error: "No token. Install the app first by visiting /api/auth."
     });
+  }
 
-    const data = await response.json();
+  try {
+    const response = await axios.post(
+      "https://voidline-38.myshopify.com/admin/api/2024-10/products.json",
+      {
+        product: {
+          title: "VOIDLINE Test Product",
+          body_html: "Created via VOIDLINE app",
+          vendor: "VOIDLINE",
+          product_type: "Custom"
+        }
+      },
+      {
+        headers: {
+          "X-Shopify-Access-Token": token,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
-    if (!response.ok) {
-      console.error("Error Shopify:", data);
-      return res.status(500).json({ error: "Error al crear producto", data });
-    }
-
-    console.log("Producto creado:", data);
-    return res.status(200).json({ success: true, product: data });
-  } catch (err) {
-    console.error("Error general:", err);
-    return res.status(500).json({ error: "Error interno" });
+    res.json({ success: true, data: response.data });
+  } catch (error) {
+    res.status(500).json({
+      error: "Error creating product",
+      details: error.response?.data || error.message
+    });
   }
 }
